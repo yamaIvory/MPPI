@@ -1,4 +1,6 @@
-<robot name="KR7108-URDF" version="1.0">
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="gen3_lite_with_gripper">
+
   <link name="BASE">
     <inertial>
       <origin xyz="0.00244324 0.00015573 0.08616742" rpy="0 0 0" />
@@ -7,17 +9,14 @@
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/BASE.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/BASE.STL" /></geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/BASE.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/BASE.STL" /></geometry>
     </collision>
   </link>
+
   <link name="SHOULDER">
     <inertial>
       <origin xyz="2.477E-05 0.02213531 0.09937686" rpy="0 0 0" />
@@ -26,27 +25,14 @@
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/SHOULDER.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/SHOULDER.STL" /></geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/SHOULDER.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/SHOULDER.STL" /></geometry>
     </collision>
   </link>
-  <joint name="J0" type="revolute">
-    <origin xyz="0 0 0.12825" rpy="0 0 0" />
-    <parent link="BASE" />
-    <child link="SHOULDER" />
-    <axis xyz="0 0 1" />
-    <limit lower="-2.76" upper="2.76" effort="10" velocity="0.35" />
-    <calibration rising="0" falling="0" />
-    <dynamics damping="0" friction="0" />
-    <safety_controller soft_upper="0" soft_lower="0" k_position="0" k_velocity="0" />
-  </joint>
+
   <link name="ARM">
     <inertial>
       <origin xyz="0.02998299 0.21154808 0.0453031" rpy="0 0 0" />
@@ -55,27 +41,14 @@
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/ARM.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/ARM.STL" /></geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/ARM.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/ARM.STL" /></geometry>
     </collision>
   </link>
-  <joint name="J1" type="revolute">
-    <origin xyz="0 -0.03 0.115" rpy="1.5708 0 0" />
-    <parent link="SHOULDER" />
-    <child link="ARM" />
-    <axis xyz="0 0 1" />
-    <limit lower="-2.76" upper="2.76" effort="14" velocity="0.35" />
-    <calibration rising="0" falling="0" />
-    <dynamics damping="0" friction="0" />
-    <safety_controller soft_upper="0" soft_lower="0" k_position="0" k_velocity="0" />
-  </joint>
+
   <link name="FOREARM">
     <inertial>
       <origin xyz="0.0301559 0.09502206 0.0073555" rpy="0 0 0" />
@@ -84,27 +57,14 @@
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/FOREARM.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/FOREARM.STL" /></geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/FOREARM.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/FOREARM.STL" /></geometry>
     </collision>
   </link>
-  <joint name="J2" type="revolute">
-    <origin xyz="0 0.28 0" rpy="-3.1416 0 0" />
-    <parent link="ARM" />
-    <child link="FOREARM" />
-    <axis xyz="0 0 1" />
-    <limit lower="-2.76" upper="2.76" effort="10" velocity="0.35" />
-    <calibration rising="0" falling="0" />
-    <dynamics damping="0" friction="0" />
-    <safety_controller soft_upper="0" soft_lower="0" k_position="0" k_velocity="0" />
-  </joint>
+
   <link name="LOWER_WRIST">
     <inertial>
       <origin xyz="0.00575149 0.01000443 0.08719207" rpy="0 0 0" />
@@ -113,27 +73,14 @@
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/LOWER_WRIST.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/LOWER_WRIST.STL" /></geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/LOWER_WRIST.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/LOWER_WRIST.STL" /></geometry>
     </collision>
   </link>
-  <joint name="J3" type="revolute">
-    <origin xyz="0 -0.14 0.02" rpy="1.5708 0 0" />
-    <parent link="FOREARM" />
-    <child link="LOWER_WRIST" />
-    <axis xyz="0 0 1" />
-    <limit lower="-2.67" upper="2.67" effort="7" velocity="0.35" />
-    <calibration rising="0" falling="0" />
-    <dynamics damping="0" friction="0" />
-    <safety_controller soft_upper="0" soft_lower="0" k_position="0" k_velocity="0" />
-  </joint>
+
   <link name="UPPER_WRIST">
     <inertial>
       <origin xyz="0.08056517 0.00980409 0.01872799" rpy="0 0 0" />
@@ -142,47 +89,207 @@
     </inertial>
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/UPPER_WRIST.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/UPPER_WRIST.STL" /></geometry>
     </visual>
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
-      <geometry>
-        <mesh filename="meshes/UPPER_WRIST.STL" />
-      </geometry>
+      <geometry><mesh filename="meshes/UPPER_WRIST.STL" /></geometry>
     </collision>
   </link>
+
+  <link name="END_EFFECTOR"/>
+  <link name="DUMMY" />
+
+  <joint name="J0" type="revolute">
+    <origin xyz="0 0 0.12825" rpy="0 0 0" />
+    <parent link="BASE" />
+    <child link="SHOULDER" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.76" upper="2.76" effort="10" velocity="0.35" />
+  </joint>
+
+  <joint name="J1" type="revolute">
+    <origin xyz="0 -0.03 0.115" rpy="1.5708 0 0" />
+    <parent link="SHOULDER" />
+    <child link="ARM" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.76" upper="2.76" effort="14" velocity="0.35" />
+  </joint>
+
+  <joint name="J2" type="revolute">
+    <origin xyz="0 0.28 0" rpy="-3.1416 0 0" />
+    <parent link="ARM" />
+    <child link="FOREARM" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.76" upper="2.76" effort="10" velocity="0.35" />
+  </joint>
+
+  <joint name="J3" type="revolute">
+    <origin xyz="0 -0.14 0.02" rpy="1.5708 0 0" />
+    <parent link="FOREARM" />
+    <child link="LOWER_WRIST" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.67" upper="2.67" effort="7" velocity="0.35" />
+  </joint>
+
   <joint name="J4" type="revolute">
     <origin xyz="0.0285 0 0.105" rpy="0 1.5708 0" />
     <parent link="LOWER_WRIST" />
     <child link="UPPER_WRIST" />
     <axis xyz="0 0 1" />
     <limit lower="-2.67" upper="2.67" effort="7" velocity="0.35" />
-    <calibration rising="0" falling="0" />
-    <dynamics damping="0" friction="0" />
-    <safety_controller soft_upper="0" soft_lower="0" k_position="0" k_velocity="0" />
   </joint>
-  <link name="END_EFFECTOR"/>
+
   <joint name="J5" type="revolute">
     <origin xyz="-0.105 0 0.0285" rpy="0 -1.5708 0" />
     <parent link="UPPER_WRIST" />
     <child link="END_EFFECTOR" />
     <axis xyz="0 0 1" />
     <limit lower="-2.67" upper="2.67" effort="7" velocity="0.35" />
-    <calibration rising="0" falling="0" />
-    <dynamics damping="0" friction="0" />
-    <safety_controller soft_upper="0" soft_lower="0" k_position="0" k_velocity="0" />
   </joint>
-  <link name="DUMMY" />
-  <joint name="END_EFFECTOR" type="fixed">
+
+  <joint name="END_EFFECTOR_FIXED" type="fixed">
     <origin xyz="0 0 0.13" rpy="0 0 0" />
     <parent link="END_EFFECTOR" />
     <child link="DUMMY" />
-    <axis xyz="0 0 1" />
-    <limit lower="0" upper="0" effort="0" velocity="0" />
-    <calibration rising="0" falling="0" />
-    <dynamics damping="0" friction="0" />
-    <safety_controller soft_upper="0" soft_lower="0" k_position="0" k_velocity="0" />
   </joint>
+
+  <joint name="arm_to_gripper" type="fixed">
+    <parent link="END_EFFECTOR" />
+    <child link="GRIPPER_FRAME" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+  <link name="GRIPPER_FRAME">
+    <inertial>
+      <origin xyz="4.03E-06 1.08E-05 0.04139748" rpy="0 0 0" />
+      <mass value="0.1395" />
+      <inertia ixx="0.00011614" ixy="1E-08" ixz="4E-08" iyy="0.00010327" iyz="0" izz="9.707E-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/GRIPPER_FRAME.STL" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/GRIPPER_FRAME.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="RIGHT_FINGER_PROX">
+    <inertial>
+      <origin xyz="0.020257 0.0063483 6.991E-05" rpy="0 0 0" />
+      <mass value="0.018385" />
+      <inertia ixx="2.29E-06" ixy="1.43E-06" ixz="0" iyy="4.56E-06" iyz="0" izz="4.77E-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/RIGHT_FINGER_PROX.STL" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/RIGHT_FINGER_PROX.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="RIGHT_FINGER_DIST">
+    <inertial>
+      <origin xyz="0.018488 0.0011091 0" rpy="0 0 0" />
+      <mass value="0.010748" />
+      <inertia ixx="6.3E-07" ixy="3.2E-07" ixz="0" iyy="1.83E-06" iyz="0" izz="1.61E-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/RIGHT_FINGER_DIST.STL" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/RIGHT_FINGER_DIST.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="LEFT_FINGER_PROX">
+    <inertial>
+      <origin xyz="0.020257 0.0063483 6.99E-05" rpy="0 0 0" />
+      <mass value="0.018385" />
+      <inertia ixx="2.29E-06" ixy="1.43E-06" ixz="0" iyy="4.56E-06" iyz="0" izz="4.77E-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/LEFT_FINGER_PROX.STL" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/LEFT_FINGER_PROX.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="LEFT_FINGER_DIST">
+    <inertial>
+      <origin xyz="-0.018488 0.0011091 0" rpy="0 0 0" />
+      <mass value="0.010748" />
+      <inertia ixx="6.3E-07" ixy="3.2E-07" ixz="0" iyy="1.83E-06" iyz="0" izz="1.61E-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/LEFT_FINGER_DIST.STL" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="meshes/LEFT_FINGER_DIST.STL" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="RIGHT_BOTTOM" type="revolute">
+    <origin xyz="0 -0.030501 0.070003" rpy="0 1.5708 0" />
+    <parent link="GRIPPER_FRAME" />
+    <child link="RIGHT_FINGER_PROX" />
+    <axis xyz="0 0 1" />
+    <limit lower="-0.09" upper="0.96" effort="1000" velocity="1000" />
+  </joint>
+
+  <joint name="RIGHT_TIP" type="revolute">
+    <origin xyz="-0.045636 0.020423 0" rpy="0 0 0" />
+    <parent link="RIGHT_FINGER_PROX" />
+    <child link="RIGHT_FINGER_DIST" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.03" upper="0.21" effort="1000" velocity="1000" />
+  </joint>
+
+  <joint name="LEFT_BOTTOM" type="revolute">
+    <origin xyz="0 0.0305 0.070003" rpy="0 1.5708 0" />
+    <parent link="GRIPPER_FRAME" />
+    <child link="LEFT_FINGER_PROX" />
+    <axis xyz="0 0 1" />
+    <limit lower="-0.96" upper="0.09" effort="1000" velocity="1000" />
+  </joint>
+
+  <joint name="LEFT_TIP" type="revolute">
+    <origin xyz="-0.045636 -0.020423 6.9901E-05" rpy="0 0 0" />
+    <parent link="LEFT_FINGER_PROX" />
+    <child link="LEFT_FINGER_DIST" />
+    <axis xyz="0 0 -1" />
+    <limit lower="-0.21" upper="1.03" effort="1000" velocity="1000" />
+  </joint>
+
 </robot>

@@ -47,10 +47,12 @@ def run_simulation():
     # 3. 목표물(빨간 공) 시각화 추가
     # ---------------------------------------------------------
     # 목표 위치 설정 (시작 위치에서 Z축 +20cm)
-    q_curr = np.array([0,0,0,0,0,0]) 
+
+    nq = mppi.dyn.model.nq
+    q_curr = np.zeros(nq) 
     _, start_P, _, _ = mppi.dyn.step(q_curr, np.zeros(6))
     
-    target_P = np.array([0.3, 0.3, 0.3])
+    target_P = np.array([0.3, 0.3, 0.1])
     target_R = np.array([
         [1,  0,  0],
         [0, -1,  0],
