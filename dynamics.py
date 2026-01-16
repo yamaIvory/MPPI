@@ -25,7 +25,7 @@ class Dynamics:
       # 나머지 설정
       self.ee_frame_id = self.model.getFrameId("DUMMY") 
       self.dt = 0.02
-      self.damping = 1e-3
+      self.damping = 1e-4
       self.q_min = self.model.lowerPositionLimit
       self.q_max = self.model.upperPositionLimit
 

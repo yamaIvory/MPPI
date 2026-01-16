@@ -17,7 +17,7 @@ def run_simulation():
     urdf_path = os.path.join(current_dir, "gen3_lite.urdf")
     mesh_dir = current_dir # 메쉬 파일이 있는 기준 폴더
 
-    print(f"1. 시뮬레이션 초기화 중...")
+    print(f"시뮬레이션 초기화 중...")
     
     # ---------------------------------------------------------
     # 2. 로봇 & 시각화 도구 로딩
@@ -46,18 +46,17 @@ def run_simulation():
     # ---------------------------------------------------------
     # 3. 목표물(빨간 공) 시각화 추가
     # ---------------------------------------------------------
-    # 목표 위치 설정 (시작 위치에서 Z축 +20cm)
+    # 목표 위치 설정
 
     nq = mppi.dyn.model.nq
-    q_curr = np.zeros(nq) 
-    _, start_P, _, _ = mppi.dyn.step(q_curr, np.zeros(6))
+    q_curr = np.zeros(nq)
+    # q_curr[:6] = np.array([0.0, -0.28, 1.3, 0.0, 0.5, 3.14])
+
     
-    target_P = np.array([0.3, 0.3, 0.1])
-    target_R = np.array([
-        [1,  0,  0],
-        [0, -1,  0],
-        [0,  0, -1]
-    ])
+    target_P = np.array([0.3, 0.3, 0.3])    
+    target_R = np.array([[1, 0, 0],
+                        [0, -1, 0],
+                        [0, 0, -1]])
 
     # 빨간 공 생성 (반지름 2cm)
     viz.viewer['target_ball'].set_object(g.Sphere(0.02), g.MeshLambertMaterial(color=0xff0000, opacity=0.8))

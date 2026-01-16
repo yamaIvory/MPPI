@@ -77,7 +77,6 @@ class Gen3LiteMPPINode:
         self.pub_vel.publish(msg)
 
     def prepare_hardware(self):
-        """Home 이동 없이 안전 설정만 수행"""
         rospy.loginfo("1. 결함(Faults) 제거...")
         self.clear_faults()
         
