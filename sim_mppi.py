@@ -50,13 +50,13 @@ def run_simulation():
 
     nq = mppi.dyn.model.nq
     q_curr = np.zeros(nq)
-    # q_curr[:6] = np.array([0.0, -0.28, 1.3, 0.0, 0.5, 3.14])
+    q_curr[:6] = np.array([0.0, -0.28, 1.3, 0.0, 0.5, 3.14])
 
+    _, start_P, start_R, _ = mppi.dyn.step(q_curr, np.zeros(6))
     
-    target_P = np.array([0.3, 0.3, 0.3])    
-    target_R = np.array([[1, 0, 0],
-                        [0, -1, 0],
-                        [0, 0, -1]])
+    target_P = start_P.copy()   
+    target_P[2] += 0.1
+    target_R = start_R.copy()
 
     # 빨간 공 생성 (반지름 2cm)
     viz.viewer['target_ball'].set_object(g.Sphere(0.02), g.MeshLambertMaterial(color=0xff0000, opacity=0.8))

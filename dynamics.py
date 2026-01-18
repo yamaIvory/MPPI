@@ -58,33 +58,46 @@ class Dynamics:
         return pin.computeCollisions(self.collision_model, self.collision_data, True)
 
 
-
-    def step(self, q_curr, u_task):
-        """제어 입력을 받아 다음 관절 상태를 계산합니다."""
-        # 1. 자코비안 및 프레임 업데이트
-        pin.computeJointJacobians(self.model, self.data, q_curr)
+    def solve_ik(self, q, u_task):
+        """
+        현재 각도 q와 목표 속도 u_task를 받아,
+        물리적 한계를 고려한 안전한 관절 속도 dq를 반환합니다.
+        """
+        # 1. 자코비안 계산을 위한 업데이트
+        pin.computeJointJacobians(self.model, self.data, q)
         pin.updateFramePlacements(self.model, self.data)
         
-        # J는 (6 x 10) 행렬 (6자유도 작업공간 x 10개 관절)
-        # 전체 자코비안(6x10) 가져오기
+        # 2. 자코비안 가져오기 (작업공간 6자유도 x 관절 n개)
         J_full = pin.getFrameJacobian(self.model, self.data, self.ee_frame_id, pin.ReferenceFrame.LOCAL_WORLD_ALIGNED)
-        
-        # 2. [핵심] 팔 관절에 해당하는 앞의 6열만 잘라내기 (6x6).
         J = J_full[:, :6] 
         
-        # I.K
+        # 3. Damped Least Squares (DLS) IK 풀이
         JJT = J @ J.T
         damp_matrix = (self.damping ** 2) * np.eye(6)
         temp = np.linalg.solve(JJT + damp_matrix, u_task)
-        
         dq_arm = J.T @ temp
 
-        # 5. 전체 10차원 dq 벡터를 만들고 그리퍼 부분은 0으로 유지
+        # 4. [Hardware Safety] 관절 속도 물리적 한계 클리핑
+        # Kinova Gen3 Lite 스펙상 한계 혹은 안전 한계 설정
+        #-----------안전장치-----------------------------------------
+        joint_vel_limit = 0.2  # rad/s
+        dq_arm = np.clip(dq_arm, -joint_vel_limit, joint_vel_limit)
+        #-----------------------------------------------------------
+
+        # 5. 전체 dq 벡터 생성 (그리퍼 포함)
         dq = np.zeros(self.model.nq)
         dq[:6] = dq_arm 
+        
+        return dq
 
+    def step(self, q_curr, u_task):
+        """제어 입력을 받아 다음 관절 상태를 계산합니다."""
+        dq = self.solve_ik(q_curr, u_task)
         q_next = pin.integrate(self.model, q_curr, dq * self.dt)
+
+        #-----------안전장치------------------------------------
         q_next = np.clip(q_next, self.q_min, self.q_max)
+        #------------------------------------------------------
         
         pin.forwardKinematics(self.model, self.data, q_next)
         pin.updateFramePlacements(self.model, self.data)

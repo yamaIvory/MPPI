@@ -102,24 +102,25 @@ class Gen3LiteMPPINode:
             u_opt = self.mppi.get_optimal_command(self.q_curr, target_P, target_R)
             
             # 2. dq 계산 (10차원 중 앞 6개만 사용) [cite: 1-13, 14-22]
-            _, _, _, dq_rad_full = self.mppi.dyn.step(self.q_curr, u_opt)
-            dq_deg_arm = np.rad2deg(dq_rad_full[:6])
+            dq_rad_full = self.mppi.dyn.solve_ik(self.q_curr, u_opt)
+            dq_arm = dq_rad_full[:6]
 
             # 3. 속도 필터링 및 안전 클램핑
-            dq_deg_arm = alpha * prev_dq + (1 - alpha) * dq_deg_arm
-            dq_deg_arm = np.clip(dq_deg_arm, -20.0, 20.0) # 안전을 위해 속도 제한 강화
-            prev_dq = dq_deg_arm
+            dq_arm = alpha * prev_dq + (1 - alpha) * dq_arm
+            dq_arm = np.clip(dq_arm, -0.5, 0.5) # 안전을 위해 속도 제한 강화
+            prev_dq = dq_arm
 
             # 4. 도착 판정
-            _, curr_P, _, _ = self.mppi.dyn.step(self.q_curr, np.zeros(6))
+            _, curr_P, curr_R, _ = self.mppi.dyn.step(self.q_curr, np.zeros(6))
             dist = np.linalg.norm(curr_P - target_P)
+            rot_err = 3.0 - np.trace(target_R.T @ curr_R)
             
-            if dist < 0.01:
-                dq_deg_arm = np.zeros(6)
+            if dist < 0.02 and rot_err < 0.1:
+                dq_arm = np.zeros(6)
                 rospy.loginfo_throttle(10, "목표 높이 도달")
 
             # 5. 명령 발행 (팔 관절 6개)
-            msg = Float64MultiArray(data=dq_deg_arm.tolist())
+            msg = Float64MultiArray(data=dq_arm.tolist())
             self.pub_vel.publish(msg)
             
             rate.sleep()
