@@ -1,191 +1,106 @@
+import torch
 import numpy as np
-from dynamics import Dynamics
+from dynamics_gpu import DynamicsGPU
 
-class MPPIController:
+class MPPIControllerGPU:
     def __init__(self, urdf_path):
-        self.dyn = Dynamics(urdf_path)
-
-        # ---- MPPI Hyperparameters ----
-        self.K = 500            # number of rollouts
-        self.N = 30             # horizon
-        self.dt = 0.02
-        self.lambda_ = 0.6      # temperature
-        self.alpha = 0.3
-
-        # Cost weights
-        self.w_pos = 150.0
-        self.w_rot = 20.0
-        self.w_pos_terminal = 300.0
-        self.w_rot_terminal = 50.0
-        self.w_vel = 0.1
-
-        # ---- Noise covariance ----
-        self.sigma = np.array([1.0]*3 + [0.5]*3)
-        self.sigma_sq = self.sigma**2
-
-        # R = lambda * Sigma^{-1}
-        self.R = np.diag(self.lambda_ / self.sigma_sq)
-
-        # Nominal control sequence
-        self.U = np.zeros((self.N, 6))
-
-        # 관절 프레임 ID 찾기
-        self.joint_names = ["BASE", "SHOULDER", "ARM", "FOREARM", "LOWER_WRIST", "UPPER_WRIST", "DUMMY"]
-        self.joint_ids = []
-        for name in self.joint_names:
-            if self.dyn.model.existFrame(name):
-                for i, frame in enumerate(self.dyn.model.frames):
-                    if frame.name == name:
-                        self.joint_ids.append(i)
-                        break
-        self.desk_height = 0.0                
-
-    # ---------------------------------------------------
-    # State cost q(x)
-    # ---------------------------------------------------
-    def state_cost(self, ee_pos, ee_rot, P_goal, R_goal):
-        pos_err = np.linalg.norm(ee_pos - P_goal)
-        rot_err = 3.0 - np.trace(R_goal.T @ ee_rot)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.dyn = DynamicsGPU(urdf_path, device=self.device)
         
-        cost = (self.w_pos * pos_err**2) + (self.w_rot * rot_err)
-        return cost
-   
-    # ---------------------------------------------------
-    # Terminal cost φ(x_T)
-    # ---------------------------------------------------
-    def terminal_cost(self, ee_pos, ee_rot, P_goal, R_goal):
-        pos_err = np.linalg.norm(ee_pos - P_goal)
-        rot_err = 3.0 - np.trace(R_goal.T @ ee_rot)
+        # ---- Hyperparameters ----
+        self.K = 400            # 400
+        self.N = 10             # 20
+        self.dt = 0.05          # 0.05
+        self.lambda_ = 0.1      # 0.1
+        self.alpha = 0.1        # 0.2
 
-        return self.w_pos_terminal*pos_err**2 + self.w_rot_terminal*rot_err
+        # [Running Cost Weights] - 가는 과정
+        self.w_pos = 100.0    # 100
+        self.w_rot = 10.0     # 10
+        self.w_vel = 0.1      # 0.1
+        
+        # [Terminal Cost Weights] - 최종 결과 (중요! 더 높게 설정)
+        self.w_pos_term = 2000.0 
+        self.w_rot_term = 200.0
 
-    # --------------------------------------------------- 
-    # Height Cost (바닥 충돌 방지)
-    # ---------------------------------------------------
-    def get_all_joint_height_cost(self, data):
-        total_penalty = 0
-        # 모든 주요 관절의 높이를 확인
-        for frame_id in self.joint_ids:
-            z_pos = data.oMf[frame_id].translation[2]
+        # Noise
+        self.sigma = torch.tensor([0.01] * 6, device=self.device)  # 0.3
+        
+        self.U = torch.zeros((self.N, 6), device=self.device)
+
+    def _compute_cost(self, ee_pos, ee_rot, P_goal, R_goal, u_t=None, is_terminal=False):
+        """Cost 계산 함수 분리 (재사용을 위해)"""
+        # 1. 위치 오차
+        pos_err = torch.norm(ee_pos - P_goal, dim=1)**2
+        
+        # 2. 회전 오차
+        R_diff = torch.matmul(R_goal.transpose(-1, -2), ee_rot)
+        trace = R_diff[:, 0, 0] + R_diff[:, 1, 1] + R_diff[:, 2, 2]
+        rot_err = 3.0 - trace
+        
+        # 가중치 선택
+        w_p = self.w_pos_term if is_terminal else self.w_pos
+        w_r = self.w_rot_term if is_terminal else self.w_rot
+        
+        cost = w_p * pos_err + w_r * rot_err
+        
+        if not is_terminal and u_t is not None:
+            # 속도 비용 (에너지)
+            cost += self.w_vel * torch.sum(u_t**2, dim=1)
             
-            # [핵심 로직]
-            # 높이가 0.0보다 낮으면(지하) 엄청난 벌점
-            if z_pos < self.desk_height:
-                total_penalty += 1e9 
-        return total_penalty
-    # --------------------------------------------------- 
-    # 관절 한계 넘어서는거 방지
-    # ---------------------------------------------------
-    def get_joint_limit_cost(self, q):
-        """
-        관절이 한계(Min/Max)에 가까워지거나 넘어가면 비용을 부과합니다.
-        """
-        # 안전 마진 (예: 한계치 5도 전부터 비용 발생 시작)
-        margin = 0.05  # rad (약 3도)
+            # 충돌 비용 (Running cost에서만 체크해도 충분)
+            floor_mask = ee_pos[:, 2] < 0.05 
+            cost = torch.where(floor_mask, cost + 10000.0, cost)
+            
+        return cost
+
+    def get_optimal_command(self, q_curr_np, P_goal_np, R_goal_np):
+        q_curr = torch.tensor(q_curr_np, device=self.device).float()
+        q_sim = q_curr.unsqueeze(0).repeat(self.K, 1) 
         
-        if np.any(q < self.dyn.q_min) or np.any(q > self.dyn.q_max):
-            return 1e9  # 즉시 사망 (경로 폐기)
+        P_goal = torch.tensor(P_goal_np, device=self.device).float().unsqueeze(0)
+        R_goal = torch.tensor(R_goal_np, device=self.device).float().unsqueeze(0)
         
-        # 1. 하한선(Min) 침범 검사: (q_min + margin) 보다 작으면 비용 발생
-        # q가 q_min보다 작아질수록 값이 커짐 (0보다 클 때만 제곱)
-        diff_lower = (self.dyn.q_min + margin) - q
-        cost_lower = np.sum(np.maximum(0, diff_lower)**2)
+        noise = torch.randn((self.K, self.N, 6), device=self.device) * self.sigma
+        u_samples = self.U.unsqueeze(0) + noise
+        #-------!!!!!!!!!!!!안전장치!!!!!!!!!!!!!!!!!!----------------------------
+        limit_vel = 0.01   # 0.05
+        u_samples = torch.clamp(u_samples, -limit_vel, limit_vel)
+        #------------------------------------------------------------------------
+
+        total_costs = torch.zeros(self.K, device=self.device)
+
+        # 1. Running Cost (0 ~ N-1)
+        for t in range(self.N):
+            u_t = u_samples[:, t, :]
+            q_next, ee_pos, ee_rot = self.dyn.step(q_sim, u_t)
+            
+            step_cost = self._compute_cost(ee_pos, ee_rot, P_goal, R_goal, u_t, is_terminal=False)
+            total_costs += step_cost * self.dt
+            
+            q_sim = q_next # 상태 업데이트
+
+        # 2. Terminal Cost (at N) - [여기가 부활했습니다!]
+        # 마지막 q_sim은 N번째 스텝의 관절 각도입니다.
+        # FK를 한 번 더 수행해서 마지막 위치를 확인합니다.
+        tg = self.dyn.chain.forward_kinematics(q_sim)
+        m = tg.get_matrix()
+        term_pos = m[:, :3, 3]
+        term_rot = m[:, :3, :3]
         
-        # 2. 상한선(Max) 침범 검사: (q_max - margin) 보다 크면 비용 발생
-        diff_upper = q - (self.dyn.q_max - margin)
-        cost_upper = np.sum(np.maximum(0, diff_upper)**2)
+        term_cost = self._compute_cost(term_pos, term_rot, P_goal, R_goal, None, is_terminal=True)
+        total_costs += term_cost # 마지막에 강력한 한 방 추가!
 
-        # 가중치(w_limit)를 곱해서 반환 (이 값은 튜닝 필요, 보통 100~1000 등 크게 줌)
-        w_limit = 100.0
-        return w_limit * (cost_lower + cost_upper)
-    # ---------------------------------------------------
-    # MPPI main routine
-    # ---------------------------------------------------
-    def get_optimal_command(self, q_curr, P_goal, R_goal):
-
-        # Noise: epsilon_k,t
-        noise = np.random.normal(loc=0.0, scale=self.sigma,
-                                size=(self.K, self.N, 6) )
-        costs = np.zeros(self.K)
-
-        # ---------------------------------------------------
-        # Rollouts
-        # ---------------------------------------------------
-        for k in range(self.K):
-            q_sim = q_curr.copy()
-            S = 0.0
-
-            for t in range(self.N):
-                
-                u_nom = self.U[t]
-                du = noise[k, t]
-                u = u_nom + du
-
-                # ----------안전장치--------------------------
-                v_limit = 0.5
-                w_limit = 2.0
-                u[:3] = np.clip(u[:3], -v_limit, v_limit)
-                u[3:] = np.clip(u[3:], -w_limit, w_limit)
-                #---------------------------------------------
-
-                # Dynamics step
-                q_next, ee_pos, ee_rot, _ = self.dyn.step(q_sim, u)
-
-                # 책상 충돌 패널티
-                height_cost = self.get_all_joint_height_cost(self.dyn.data)
-                # 관절 한계 초과 패널티
-                limit_cost = self.get_joint_limit_cost(q_next)
-                # Cost 계산
-                state_cost = self.state_cost(ee_pos, ee_rot, P_goal, R_goal)
-                control_cost = self.w_vel*np.sum(u**2)
-
-                # summation
-                S += (state_cost + control_cost) * self.dt + height_cost + limit_cost
-
-                if height_cost > 1e8:
-                    S += 1e9 * (self.N - t) # 남은 시간만큼 벌점 추가
-                    break
-                if limit_cost > 1e8:
-                    S += 1e9 * (self.N - t) # 남은 시간만큼 벌점 추가
-                    break
-
-                q_sim = q_next
-
-            # Terminal cost
-            if S < 1e8:   # 충돌 안 난 경우만
-                S += self.terminal_cost(ee_pos, ee_rot, P_goal, R_goal)
-
-            costs[k] = S
-
-        # ---------------------------------------------------
-        # Weight computation
-        # ---------------------------------------------------
-        beta = np.min(costs)
-
-        weights = np.exp(-(costs - beta) / self.lambda_)
-        weights /= np.sum(weights) + 1e-10
-
-        # weight * noise
-        delta_U = np.sum(weights[:, None, None] * noise, axis=0)
+        # 3. Update
+        beta = torch.min(total_costs)
+        weights = torch.exp(-1.0/self.lambda_ * (total_costs - beta))
+        weights /= (torch.sum(weights) + 1e-10)
         
-        # U_new = U_old + weight*noise
-        U_new  = self.U + delta_U
-
-        # smoothing
-        self.U = (1-self.alpha)*self.U + self.alpha * U_new
-
-        # ------------안전장치--------------------------------
-        v_limit = 0.5
-        w_limit = 2.0
-        self.U[:, :3] = np.clip(self.U[:, :3], -v_limit, v_limit)
-        self.U[:, 3:] = np.clip(self.U[:, 3:], -w_limit, w_limit)
-
-        #----------------------------------------------------
-        # Extract control & shift
-        # ---------------------------------------------------
-        u_opt = self.U[0].copy()
-        self.U = np.roll(self.U, -1, axis=0)
-        self.U[-1] = np.zeros(6)
-
-
-        return u_opt
+        delta_u = torch.sum(weights.view(self.K, 1, 1) * noise, dim=0)
+        self.U = (1 - self.alpha) * self.U + self.alpha * (self.U + delta_u)
+        
+        u_ret = self.U[0].clone()
+        self.U = torch.roll(self.U, -1, dims=0)
+        self.U[-1] = 0.0
+        
+        return u_ret.cpu().numpy()
